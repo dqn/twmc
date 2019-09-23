@@ -1,2 +1,4 @@
 main
 config.toml
+media/*
+!.keep
