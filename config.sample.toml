@@ -6,3 +6,6 @@ AccessSecret = ""
 
 [StreamFilterParams]
 Track = [ "Golang" ]
+
+[Source]
+Whitelist = [ "Twitter for iPhone", "Twitter for Android" ]

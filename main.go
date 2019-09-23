@@ -19,6 +19,7 @@ import (
 type Config struct {
 	Authentication     Authentication
 	StreamFilterParams twitter.StreamFilterParams
+	Source             Source
 }
 
 type Authentication struct {
@@ -26,6 +27,10 @@ type Authentication struct {
 	ConsumerSecret string
 	AccessToken    string
 	AccessSecret   string
+}
+
+type Source struct {
+	Whitelist []string
 }
 
 func download(url string) {
@@ -71,6 +76,16 @@ func main() {
 
 	demux := twitter.NewSwitchDemux()
 	demux.Tweet = func(tweet *twitter.Tweet) {
+		isPermitted := false
+
+		for _, source := range config.Source.Whitelist {
+			isPermitted = isPermitted || strings.Contains(tweet.Source, source)
+		}
+
+		if !isPermitted {
+			return
+		}
+
 		media := func() []twitter.MediaEntity {
 			if tweet.ExtendedEntities != nil {
 				return tweet.ExtendedEntities.Media
