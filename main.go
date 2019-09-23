@@ -76,13 +76,13 @@ func main() {
 
 	demux := twitter.NewSwitchDemux()
 	demux.Tweet = func(tweet *twitter.Tweet) {
-		isPermitted := false
+		isPermittedSource := false
 
 		for _, source := range config.Source.Whitelist {
-			isPermitted = isPermitted || strings.Contains(tweet.Source, source)
+			isPermittedSource = isPermittedSource || strings.Contains(tweet.Source, source)
 		}
 
-		if !isPermitted {
+		if !isPermittedSource {
 			return
 		}
 
@@ -99,12 +99,27 @@ func main() {
 		for _, medium := range media {
 			if variants := medium.VideoInfo.Variants; len(variants) > 0 {
 				// 動画
+				var (
+					maxBitrate int
+					url        string
+				)
+
 				for _, variant := range variants {
-					if variant.ContentType == "video/mp4" {
-						download(strings.Split(variant.URL, "?")[0])
-						fmt.Println(variant.URL)
+					// 最も Bitrate が高いエンティティを探す
+					if variant.ContentType != "video/mp4" {
+						continue
 					}
+
+					if variant.Bitrate < maxBitrate {
+						continue
+					}
+
+					maxBitrate = variant.Bitrate
+					url = variant.URL
 				}
+
+				download(strings.Split(url, "?")[0])
+				fmt.Println(url)
 			} else {
 				// 画像
 				download(medium.MediaURLHttps)
