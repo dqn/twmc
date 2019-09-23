@@ -53,12 +53,64 @@ func download(url string) {
 	}
 }
 
+func getVideoUrl(variants []twitter.VideoVariant) string {
+	var (
+		maxBitrate int
+		url        string
+	)
+
+	for _, variant := range variants {
+		// 最も Bitrate が高いエンティティを探す
+		if (variant.ContentType == "video/mp4") && (variant.Bitrate > maxBitrate) {
+			maxBitrate = variant.Bitrate
+			url = variant.URL
+		}
+	}
+
+	return strings.Split(url, "?")[0]
+}
+
+func getMedia(tweet *twitter.Tweet) []twitter.MediaEntity {
+	if tweet.ExtendedEntities != nil {
+		return tweet.ExtendedEntities.Media
+	}
+	if tweet.Entities != nil {
+		return tweet.Entities.Media
+	}
+
+	return nil
+}
+
 func main() {
 	var config Config
 
 	_, err := toml.DecodeFile("./config.toml", &config)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	demux := twitter.NewSwitchDemux()
+	demux.Tweet = func(tweet *twitter.Tweet) {
+		isSourceAvailable := false
+		for _, availableSource := range config.Source.Whitelist {
+			isSourceAvailable = isSourceAvailable || strings.Contains(tweet.Source, availableSource)
+		}
+		if !isSourceAvailable {
+			return
+		}
+
+		for _, medium := range getMedia(tweet) {
+			var url string
+			if variants := medium.VideoInfo.Variants; len(variants) > 0 {
+				// 動画
+				url = getVideoUrl(variants)
+			} else {
+				// 画像
+				url = medium.MediaURLHttps
+			}
+
+			download(url)
+		}
 	}
 
 	client := twitter.NewClient(
@@ -73,60 +125,6 @@ func main() {
 			),
 		),
 	)
-
-	demux := twitter.NewSwitchDemux()
-	demux.Tweet = func(tweet *twitter.Tweet) {
-		isPermittedSource := false
-
-		for _, source := range config.Source.Whitelist {
-			isPermittedSource = isPermittedSource || strings.Contains(tweet.Source, source)
-		}
-
-		if !isPermittedSource {
-			return
-		}
-
-		media := func() []twitter.MediaEntity {
-			if tweet.ExtendedEntities != nil {
-				return tweet.ExtendedEntities.Media
-			}
-			if tweet.Entities != nil {
-				return tweet.Entities.Media
-			}
-			return nil
-		}()
-
-		for _, medium := range media {
-			if variants := medium.VideoInfo.Variants; len(variants) > 0 {
-				// 動画
-				var (
-					maxBitrate int
-					url        string
-				)
-
-				for _, variant := range variants {
-					// 最も Bitrate が高いエンティティを探す
-					if variant.ContentType != "video/mp4" {
-						continue
-					}
-
-					if variant.Bitrate < maxBitrate {
-						continue
-					}
-
-					maxBitrate = variant.Bitrate
-					url = variant.URL
-				}
-
-				download(strings.Split(url, "?")[0])
-				fmt.Println(url)
-			} else {
-				// 画像
-				download(medium.MediaURLHttps)
-				fmt.Println(medium.MediaURLHttps)
-			}
-		}
-	}
 
 	stream, err := client.Streams.Filter(&config.StreamFilterParams)
 	if err != nil {
