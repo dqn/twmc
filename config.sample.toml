@@ -1,0 +1,8 @@
+[Authentication]
+ConsumerKey = ""
+ConsumerSecret = ""
+AccessToken = ""
+AccessSecret = ""
+
+[StreamFilterParams]
+Track = [ "Golang" ]
