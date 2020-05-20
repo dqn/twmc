@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -81,7 +82,7 @@ func getMedia(tweet *twitter.Tweet) []twitter.MediaEntity {
 	return nil
 }
 
-func main() {
+func run() error {
 	var config Config
 
 	_, err := toml.DecodeFile("./config.toml", &config)
@@ -138,4 +139,24 @@ func main() {
 	log.Println(<-ch)
 
 	stream.Stop()
+
+	return nil
+}
+
+func main() {
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "Usage:\n  twmc [options...] <search-word> <consumer-key> <consumer-secret> <access-token> <access-token-secret>\nOptions:")
+		flag.PrintDefaults()
+	}
+
+	d := flag.String("d", "./", "output `directory`")
+	w := flag.String("w", "", "comma separated `whitelist` for include Twitter clients")
+	flag.Parse()
+
+	if flag.NArg() != 5 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	println(d, w)
 }
