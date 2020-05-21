@@ -24,3 +24,7 @@ e.g.
 ```bash
 $ twmc -w "Twitter for iPhone,Twitter for Android" -d "./media/" XXXXX XXXXX XXXXX XXXXX golang
 ```
+
+## License
+
+MIT
