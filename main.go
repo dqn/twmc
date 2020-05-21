@@ -30,7 +30,7 @@ func main() {
 		wl = strings.Split(*w, ",")
 	}
 
-	twmc.Collect(&twmc.TWMCConfig{
+	err := twmc.Collect(&twmc.TWMCConfig{
 		Authentication: &twmc.Authentication{
 			ConsumerKey:       flag.Arg(0),
 			ConsumerSecret:    flag.Arg(1),
@@ -43,6 +43,10 @@ func main() {
 			Track: strings.Split(flag.Arg(4), " "),
 		},
 	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	os.Exit(0)
 }

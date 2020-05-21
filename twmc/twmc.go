@@ -14,9 +14,6 @@ import (
 	"github.com/dghubble/oauth1"
 )
 
-type TWMC struct {
-}
-
 type TWMCConfig struct {
 	Authentication     *Authentication
 	Whitelist          []string
@@ -52,8 +49,8 @@ func download(url, dest string) error {
 	return nil
 }
 
-func containsString(s []string, target string) bool {
-	for _, v := range s {
+func containsString(slice []string, target string) bool {
+	for _, v := range slice {
 		if v == target {
 			return true
 		}
@@ -61,14 +58,30 @@ func containsString(s []string, target string) bool {
 	return false
 }
 
-func chooseHighestQualityVideoURL(variants []twitter.VideoVariant) string {
+func getStringInBetween(str, start, end string) (result string) {
+	s := strings.Index(str, start)
+	if s == -1 {
+		return
+	}
+	s += len(start)
+	e := strings.Index(str[s:], end)
+	if e == -1 {
+		return
+	}
+	return str[s : s+e]
+}
+
+func retrieveSourceName(s string) string {
+	return getStringInBetween(s, ">", "</")
+}
+
+func retrieveHighestQualityVideoURL(variants []twitter.VideoVariant) string {
 	var (
 		maxBitrate int
 		url        string
 	)
 
 	for _, v := range variants {
-		println(v.ContentType)
 		if (v.ContentType == "video/mp4") && (v.Bitrate > maxBitrate) {
 			maxBitrate = v.Bitrate
 			url = v.URL
@@ -78,7 +91,7 @@ func chooseHighestQualityVideoURL(variants []twitter.VideoVariant) string {
 	return strings.Split(url, "?")[0]
 }
 
-func getMediaEntity(t *twitter.Tweet) []twitter.MediaEntity {
+func retrieveMediaEntity(t *twitter.Tweet) []twitter.MediaEntity {
 	if t.ExtendedEntities != nil {
 		return t.ExtendedEntities.Media
 	}
@@ -89,9 +102,9 @@ func getMediaEntity(t *twitter.Tweet) []twitter.MediaEntity {
 	return nil
 }
 
-func chooseMediaURL(m *twitter.MediaEntity) string {
+func retrieveMediaURL(m *twitter.MediaEntity) string {
 	if variants := m.VideoInfo.Variants; len(variants) > 0 {
-		return chooseHighestQualityVideoURL(variants)
+		return retrieveHighestQualityVideoURL(variants)
 	}
 
 	return m.MediaURLHttps
@@ -106,13 +119,16 @@ func makeTwitterClient(auth *Authentication) *twitter.Client {
 
 func Collect(config *TWMCConfig) error {
 	demux := twitter.NewSwitchDemux()
-	demux.Tweet = func(t *twitter.Tweet) {
-		if config.Whitelist != nil && !containsString(config.Whitelist, t.Source) {
-			return
+	demux.Tweet = func(tweet *twitter.Tweet) {
+		if config.Whitelist != nil {
+			s := retrieveSourceName(tweet.Source)
+			if !containsString(config.Whitelist, s) {
+				return
+			}
 		}
 
-		for _, v := range getMediaEntity(t) {
-			url := chooseMediaURL(&v)
+		for _, v := range retrieveMediaEntity(tweet) {
+			url := retrieveMediaURL(&v)
 
 			_, file := path.Split(url)
 			dest := path.Join(config.Outdir, file)
