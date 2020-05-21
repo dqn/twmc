@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/dghubble/go-twitter/twitter"
-	"github.com/dqn/tw-media-collector/twmc"
+	"github.com/dqn/twmc/twmc"
 )
 
 func main() {

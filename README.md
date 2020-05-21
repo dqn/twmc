@@ -22,7 +22,7 @@ $ twmc [options...] <consumer-key> <consumer-secret> <access-token> <access-toke
 e.g.
 
 ```bash
-$ twmc -w "Twitter for iPhone,Twitter for Android" -d "./media/" XXXXX XXXXX XXXXX XXXXX golang
+$ twmc -w "Twitter for iPhone,Twitter for Android" -d ./media/ XXXXX XXXXX XXXXX XXXXX golang
 ```
 
 ## License
